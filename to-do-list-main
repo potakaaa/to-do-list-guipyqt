@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QListWidget,
 from PyQt5 import uic
 import sys
 import sqlite3
+from PyQt5 import QtWidgets, QtGui
+from PyQt5.QtWidgets import QMessageBox
 
 conn = sqlite3.connect('mylist.database')
 c = conn.cursor()
@@ -19,16 +21,15 @@ class toDoApp(QMainWindow):
         self.listWidget = self.findChild(QListWidget, "toDoList")
         self.addButton = self.findChild(QPushButton, "addButton")
         self.deleteButton = self.findChild(QPushButton, "deleteButton")
-        self.clearButton = self.findChild(QPushButton, "clearButton")   
-        self.exitButton = self.findChild(QPushButton, "exitButton")
+        self.clearButton = self.findChild(QPushButton, "clearButton")
+        self.saveButton = self.findChild(QPushButton, "saveButton")
 
-        self.exitButton.clicked.connect(self.saveButton)
+        self.saveButton.pressed.connect(self.saveList)
         self.addButton.pressed.connect(self.addToList)
         self.deleteButton.pressed.connect(self.deleteItem)
         self.clearButton.pressed.connect(self.clearItem)
 
         self.getAllItem()
-
 
     # Add button events here
 
@@ -46,13 +47,36 @@ class toDoApp(QMainWindow):
         conn = sqlite3.connect('mylist.database')
         c = conn.cursor()
         item = self.lineEdit.text()
-        self.listWidget.addItem(item)
-        self.lineEdit.setText("")
-        c.execute('INSERT INTO to_do_list VALUES (:item)', {'item': item})
-        conn.commit()
-        conn.close()
+        if len(item) == 0:
+            error_msg = QtWidgets.QMessageBox()
+            error_msg.setText("Invalid Item! Try Again!")
+            error_msg.setIcon(QtWidgets.QMessageBox.Information)
+            error_msg.setWindowTitle("INVALID ITEM")
+            error_msg.setWindowIcon(QtGui.QIcon("icon.png"))
+            x = error_msg.exec_()
+        elif item.isspace():
+            error_msg = QtWidgets.QMessageBox()
+            error_msg.setText("Invalid Item! Try Again!")
+            error_msg.setIcon(QtWidgets.QMessageBox.Warning)
+            error_msg.setWindowTitle("INVALID ITEM")
+            error_msg.setWindowIcon(QtGui.QIcon("icon.png"))
+            x = error_msg.exec_()
+        else:
+            itemFinal = item.strip()
+            self.listWidget.addItem(itemFinal)
+            self.lineEdit.setText("")
+            c.execute('INSERT INTO to_do_list VALUES (:item)', {'item': itemFinal})
+            conn.commit()
+            conn.close()
 
-    def saveButton(self):
+            add_msg = QtWidgets.QMessageBox()
+            add_msg.setText(f"{itemFinal}: Item Added")
+            add_msg.setIcon(QtWidgets.QMessageBox.Information)
+            add_msg.setWindowTitle("ITEM ADDED")
+            add_msg.setWindowIcon(QtGui.QIcon("icon.png"))
+            x = add_msg.exec_()
+
+    def saveList(self):
         conn = sqlite3.connect('mylist.database')
         c = conn.cursor()
         c.execute('DELETE FROM to_do_list; ', )
@@ -61,23 +85,30 @@ class toDoApp(QMainWindow):
         for i in range(self.listWidget.count()):
             items.append(self.listWidget.item(i))
         for item in items:
-            c.execute('INSERT INTO to_do_list VALUES (:item)', {'item': item})
+            c.execute('INSERT INTO to_do_list VALUES (:item)', {'item': item.text()})
         conn.commit()
         conn.close()
 
+        save_msg = QtWidgets.QMessageBox()
+        save_msg.setText("List Saved")
+        save_msg.setIcon(QtWidgets.QMessageBox.Information)
+        save_msg.setWindowTitle("LIST SAVED")
+        save_msg.setWindowIcon(QtGui.QIcon("icon.png"))
+        x = save_msg.exec_()
 
     def deleteItem(self):
-        conn = sqlite3.connect('mylist.database')
-        c = conn.cursor()
         clicked = self.listWidget.currentRow()
         self.listWidget.takeItem(clicked)
-        c.execute(f'DELETE FROM to_do_list WHERE (:clicked)', {'clicked': clicked})
-        conn.commit()
-        conn.close()
-
 
     def clearItem(self):
         self.listWidget.clear()
+
+        clear_msg = QtWidgets.QMessageBox()
+        clear_msg.setText("List Cleared")
+        clear_msg.setIcon(QtWidgets.QMessageBox.Information)
+        clear_msg.setWindowTitle("LIST CLEARED")
+        clear_msg.setWindowIcon(QtGui.QIcon("icon.png"))
+        x =  clear_msg.exec_()
 
 app = QApplication(sys.argv)
 UIWindow = toDoApp()
