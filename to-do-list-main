@@ -1,0 +1,85 @@
+from PyQt5.QtWidgets import QMainWindow, QApplication, QPushButton, QListWidget, QLineEdit
+from PyQt5 import uic
+import sys
+import sqlite3
+
+conn = sqlite3.connect('mylist.database')
+c = conn.cursor()
+c.execute('CREATE TABLE if not exists to_do_list(list_item text)')
+conn.commit()
+conn.close()
+
+class toDoApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
+        uic.loadUi("ToDoApp.ui", self)
+
+        self.lineEdit = self.findChild(QLineEdit, "toDoLineEdit")
+        self.listWidget = self.findChild(QListWidget, "toDoList")
+        self.addButton = self.findChild(QPushButton, "addButton")
+        self.deleteButton = self.findChild(QPushButton, "deleteButton")
+        self.clearButton = self.findChild(QPushButton, "clearButton")   
+        self.exitButton = self.findChild(QPushButton, "exitButton")
+
+        self.exitButton.clicked.connect(self.saveButton)
+        self.addButton.pressed.connect(self.addToList)
+        self.deleteButton.pressed.connect(self.deleteItem)
+        self.clearButton.pressed.connect(self.clearItem)
+
+        self.getAllItem()
+
+
+    # Add button events here
+
+    def getAllItem(self):
+        conn = sqlite3.connect('mylist.database')
+        c = conn.cursor()
+        c.execute('SELECT * FROM to_do_list')
+        result = c.fetchall()
+        conn.commit()
+        conn.close()
+        for row in result:
+            self.listWidget.addItem(row[0])
+
+    def addToList(self):
+        conn = sqlite3.connect('mylist.database')
+        c = conn.cursor()
+        item = self.lineEdit.text()
+        self.listWidget.addItem(item)
+        self.lineEdit.setText("")
+        c.execute('INSERT INTO to_do_list VALUES (:item)', {'item': item})
+        conn.commit()
+        conn.close()
+
+    def saveButton(self):
+        conn = sqlite3.connect('mylist.database')
+        c = conn.cursor()
+        c.execute('DELETE FROM to_do_list; ', )
+
+        items = []
+        for i in range(self.listWidget.count()):
+            items.append(self.listWidget.item(i))
+        for item in items:
+            c.execute('INSERT INTO to_do_list VALUES (:item)', {'item': item})
+        conn.commit()
+        conn.close()
+
+
+    def deleteItem(self):
+        conn = sqlite3.connect('mylist.database')
+        c = conn.cursor()
+        clicked = self.listWidget.currentRow()
+        self.listWidget.takeItem(clicked)
+        c.execute(f'DELETE FROM to_do_list WHERE (:clicked)', {'clicked': clicked})
+        conn.commit()
+        conn.close()
+
+
+    def clearItem(self):
+        self.listWidget.clear()
+
+app = QApplication(sys.argv)
+UIWindow = toDoApp()
+UIWindow.show()
+app.exec_()
